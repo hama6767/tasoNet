@@ -22,12 +22,14 @@ import os
 import sys
 import csv
 import uuid
+import numpy as np
 import wave
 import contextlib
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 
 import webrtcvad
+import noisereduce as nr
 from pydub import AudioSegment
 
 
@@ -44,6 +46,7 @@ class VadConfig:
     skip_tail_sec: float = 0.0           # 各ファイルの末尾をスキップ (秒)
     max_segments_per_file: int = 0       # 0 の場合は制限なし
     normalize: bool = False              # クリップを正規化するかどうか
+    bgm_reduce: bool = False             # ★ BGM をノイズリダクションで抑制するか
 
 
 def mp3_to_wav_16k_mono(src_path: str, dst_path: str) -> None:
@@ -165,6 +168,40 @@ def vad_split_segments(
 
     return padded_segments_sec
 
+def _reduce_bgm_with_noisereduce(clip: AudioSegment) -> AudioSegment:
+    """
+    noisereduce を用いて BGM (背景音) を抑制する簡易処理。
+    - 16bit PCM mono を前提
+    - noisereduce がインポートできない場合はそのまま返す
+    """
+    if nr is None:
+        # ライブラリが無ければ何もしない
+        return clip
+
+    # AudioSegment -> numpy int16
+    samples = np.array(clip.get_array_of_samples())
+    if samples.size == 0:
+        return clip
+
+    # mono 前提だが、万一 stereo の場合は1ch目だけにする
+    if clip.channels > 1:
+        samples = samples.reshape((-1, clip.channels))[:, 0]
+
+    sr = clip.frame_rate
+    max_val = np.iinfo(np.int16).max
+
+    # [-1.0, 1.0] に正規化
+    samples_norm = samples.astype(np.float32) / max_val
+
+    # non-stationary ノイズリダクション（BGMのような時間変動のあるノイズに向いている）:contentReference[oaicite:1]{index=1}
+    reduced = nr.reduce_noise(y=samples_norm, sr=sr, stationary=False)
+
+    # 戻し
+    reduced_int16 = np.clip(reduced * max_val, -max_val, max_val).astype(np.int16)
+
+    # AudioSegment に戻す
+    new_clip = clip._spawn(reduced_int16.tobytes())
+    return new_clip
 
 def cut_and_save_wav(
     src_wav_path: str,
@@ -173,7 +210,9 @@ def cut_and_save_wav(
     base_id_prefix: str,
     max_segments_per_file: int = 0,
     normalize: bool = False,
+    bgm_reduce: bool = False,  # ★ 追加
 ) -> List[dict]:
+
     """
     segments_sec (start_sec, end_sec) ごとに wav を切り出して保存。
     - max_segments_per_file: >0 なら、1ファイルあたりの最大セグメント数
@@ -191,6 +230,16 @@ def cut_and_save_wav(
         start_ms = int(start_sec * 1000)
         end_ms = int(end_sec * 1000)
         clip = audio[start_ms:end_ms]
+
+        # ★ BGM抑制（noisereduce を使った簡易ノイズリダクション）
+        if bgm_reduce:
+            clip = _reduce_bgm_with_noisereduce(clip)
+
+        # 音量正規化（クリップ音防止のため -1 dBFS くらいに）
+        if normalize:
+            if clip.max_dBFS != float("-inf"):
+                gain = -1.0 - clip.max_dBFS  # 最大ピークを -1 dBFS に
+                clip = clip.apply_gain(gain)
 
         # 音量正規化（クリップ音防止のため -1 dBFS くらいに）
         if normalize:
@@ -270,7 +319,9 @@ def process_mp3_folder(
                     base_prefix,
                     max_segments_per_file=cfg.max_segments_per_file,
                     normalize=cfg.normalize,
+                    bgm_reduce=getattr(cfg, "bgm_reduce", False),  # ★ 追加
                 )
+
 
                 for row in clip_meta:
                     writer.writerow(row)

@@ -141,6 +141,14 @@ class MainWindow(QMainWindow):
         self.max_seg_count_spin.setToolTip("0 の場合は無制限。大きすぎる場合に数を絞る用途など。")
         extra_layout.addWidget(self.max_seg_count_spin)
 
+
+        self.bgm_reduce_checkbox = QCheckBox("BGMを抑制（ノイズ除去）")
+        self.bgm_reduce_checkbox.setChecked(False)
+        self.bgm_reduce_checkbox.setToolTip(
+            "noisereduce を使った簡易ノイズリダクションでBGM成分を抑えます（要 pip install noisereduce）。"
+        )
+        extra_layout.addWidget(self.bgm_reduce_checkbox)
+
         self.normalize_checkbox = QCheckBox("クリップ音量を正規化")
         self.normalize_checkbox.setChecked(False)
         self.normalize_checkbox.setToolTip("各セグメントの最大音量を揃えます（ピークを -1 dBFS に）。")
@@ -192,6 +200,7 @@ class MainWindow(QMainWindow):
             skip_tail_sec=float(self.skip_tail_spin.value()),
             max_segments_per_file=int(self.max_seg_count_spin.value()),
             normalize=self.normalize_checkbox.isChecked(),
+            bgm_reduce=self.bgm_reduce_checkbox.isChecked(),  # ★ 追加
         )
 
         self.log_text.clear()
