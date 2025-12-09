@@ -157,7 +157,6 @@ class DockerTrainWorker(QThread):
 
         self.done_signal.emit(rc)
 
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -177,7 +176,8 @@ class MainWindow(QMainWindow):
         # ワークスペースルート
         ws_layout = QHBoxLayout()
         ws_layout.addWidget(QLabel("ワークスペースルート:"))
-        self.ws_edit = QLineEdit()
+        # ★スクショと同じパスを初期値に
+        self.ws_edit = QLineEdit("/home/hama6767/DA/tasoNet/dataset/processed/wavs")
         ws_btn = QPushButton("参照...")
         ws_btn.clicked.connect(self.browse_workspace)
         ws_layout.addWidget(self.ws_edit)
@@ -187,7 +187,10 @@ class MainWindow(QMainWindow):
         # .list
         list_layout = QHBoxLayout()
         list_layout.addWidget(QLabel(".list ファイル (train):"))
-        self.list_edit = QLineEdit()
+        # ★初期値
+        self.list_edit = QLineEdit(
+            "/home/hama6767/DA/tasoNet/dataset/processed/wavs/gpt_sovits_streamer.list"
+        )
         list_btn = QPushButton("参照...")
         list_btn.clicked.connect(self.browse_list)
         list_layout.addWidget(self.list_edit)
@@ -201,7 +204,8 @@ class MainWindow(QMainWindow):
         exp_layout.addWidget(self.exp_edit)
 
         exp_layout.addWidget(QLabel("output_root:"))
-        self.out_edit = QLineEdit()
+        # ★初期値
+        self.out_edit = QLineEdit("/home/hama6767/DA/tasoNet")
         out_btn = QPushButton("参照...")
         out_btn.clicked.connect(self.browse_output_root)
         exp_layout.addWidget(self.out_edit)
@@ -211,7 +215,7 @@ class MainWindow(QMainWindow):
         # GPU / half
         gpu_layout = QHBoxLayout()
         gpu_layout.addWidget(QLabel("GPU IDs (例: 0 or 0,1):"))
-        self.gpu_edit = QLineEdit("0")
+        self.gpu_edit = QLineEdit("0")  # ここはすでにスクショ通り
         gpu_layout.addWidget(self.gpu_edit)
 
         self.half_checkbox = QCheckBox("特徴抽出を half 精度で実行")
@@ -225,7 +229,8 @@ class MainWindow(QMainWindow):
 
         bert_layout = QHBoxLayout()
         bert_layout.addWidget(QLabel("BERT ディレクトリ (任意):"))
-        self.bert_edit = QLineEdit()
+        # BERT は空のまま
+        self.bert_edit = QLineEdit("")
         bert_btn = QPushButton("参照...")
         bert_btn.clicked.connect(self.browse_bert)
         bert_layout.addWidget(self.bert_edit)
@@ -234,7 +239,10 @@ class MainWindow(QMainWindow):
 
         hubert_layout = QHBoxLayout()
         hubert_layout.addWidget(QLabel("CNHubert ベースディレクトリ (任意):"))
-        self.hubert_edit = QLineEdit()
+        # ★初期値 (スクショの値)
+        self.hubert_edit = QLineEdit(
+            "/workspace/GPT-SoVITS/GPT_SoVITS/pretrained_models/GPT-SoVITS/chinese-hubert-base"
+        )
         hubert_btn = QPushButton("参照...")
         hubert_btn.clicked.connect(self.browse_hubert)
         hubert_layout.addWidget(self.hubert_edit)
@@ -243,7 +251,10 @@ class MainWindow(QMainWindow):
 
         sem_s2_layout = QHBoxLayout()
         sem_s2_layout.addWidget(QLabel("3-get-semantic 用 SoVITS ckpt (任意):"))
-        self.semantic_ckpt_edit = QLineEdit()
+        # ★初期値
+        self.semantic_ckpt_edit = QLineEdit(
+            "/workspace/GPT-SoVITS/GPT_SoVITS/pretrained_models/s2G488k.pth"
+        )
         sem_s2_btn = QPushButton("参照...")
         sem_s2_btn.clicked.connect(self.browse_semantic_ckpt)
         sem_s2_layout.addWidget(self.semantic_ckpt_edit)
@@ -252,7 +263,10 @@ class MainWindow(QMainWindow):
 
         sem_cfg_layout = QHBoxLayout()
         sem_cfg_layout.addWidget(QLabel("3-get-semantic 用 SoVITS config (任意):"))
-        self.semantic_cfg_edit = QLineEdit()
+        # ★初期値
+        self.semantic_cfg_edit = QLineEdit(
+            "/workspace/GPT-SoVITS/GPT_SoVITS/configs/s2.json"
+        )
         sem_cfg_btn = QPushButton("参照...")
         sem_cfg_btn.clicked.connect(self.browse_semantic_cfg)
         sem_cfg_layout.addWidget(self.semantic_cfg_edit)
@@ -266,7 +280,10 @@ class MainWindow(QMainWindow):
 
         s2_layout = QHBoxLayout()
         s2_layout.addWidget(QLabel("SoVITS config (s2.json):"))
-        self.s2_edit = QLineEdit()
+        # ★初期値
+        self.s2_edit = QLineEdit(
+            "/workspace/GPT-SoVITS/GPT_SoVITS/configs/s2.json"
+        )
         s2_btn = QPushButton("参照...")
         s2_btn.clicked.connect(self.browse_s2_config)
         s2_layout.addWidget(self.s2_edit)
@@ -275,7 +292,8 @@ class MainWindow(QMainWindow):
 
         pre_s2_layout = QHBoxLayout()
         pre_s2_layout.addWidget(QLabel("FT 用 SoVITS 事前学習 ckpt (pretrained_s2G に反映):"))
-        self.pre_s2_edit = QLineEdit()
+        # 初期値は空（スクショも空）
+        self.pre_s2_edit = QLineEdit("")
         pre_s2_btn = QPushButton("参照...")
         pre_s2_btn.clicked.connect(self.browse_pre_s2)
         pre_s2_layout.addWidget(self.pre_s2_edit)
@@ -283,8 +301,11 @@ class MainWindow(QMainWindow):
         cfg_layout.addLayout(pre_s2_layout)
 
         s1_layout = QHBoxLayout()
-        s1_layout.addWidget(QLabel("GPT(Stage1) config (s1longer.yaml 等, 任意):"))
-        self.s1_edit = QLineEdit()
+        s1_layout.addWidget(QLabel("GPT(Stage1) config (s1longer-v2.yaml 等, 任意):"))
+        # ★初期値
+        self.s1_edit = QLineEdit(
+            "/workspace/GPT-SoVITS/GPT_SoVITS/configs/s1longer-v2.yaml"
+        )
         s1_btn = QPushButton("参照...")
         s1_btn.clicked.connect(self.browse_s1_config)
         s1_layout.addWidget(self.s1_edit)
@@ -292,6 +313,10 @@ class MainWindow(QMainWindow):
         cfg_layout.addLayout(s1_layout)
 
         layout.addLayout(cfg_layout)
+
+        # 以下（チェックボックスやボタン、ログなど）は今のままで OK
+        # ...
+
 
         # ステージ選択
         stage_layout = QHBoxLayout()

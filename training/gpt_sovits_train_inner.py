@@ -84,6 +84,7 @@ def main():
 
     repo_dir = Path("/workspace/GPT-SoVITS").resolve()
     prep_dir = repo_dir / "GPT_SoVITS" / "prepare_datasets"
+    gpt_root = repo_dir / "GPT_SoVITS"
 
     if not repo_dir.is_dir():
         raise RuntimeError(f"GPT-SoVITS repo が見つかりません: {repo_dir}")
@@ -94,8 +95,16 @@ def main():
 
     stages = set(s.strip() for s in args.stages.split(",") if s.strip())
 
-    # 共通 env
     env = os.environ.copy()
+
+    # PYTHONPATH: repo 直下 + GPT_SoVITS
+    prev_pp = env.get("PYTHONPATH", "")
+    extra_paths = [str(repo_dir), str(gpt_root)]
+    if prev_pp:
+        env["PYTHONPATH"] = os.pathsep.join(extra_paths + [prev_pp])
+    else:
+        env["PYTHONPATH"] = os.pathsep.join(extra_paths)
+
     env["inp_text"] = str(list_path)
     env["exp_name"] = args.exp_name
     env["opt_dir"] = str(output_root)
@@ -105,13 +114,18 @@ def main():
     env["CUDA_VISIBLE_DEVICES"] = args.gpus
     env["is_half"] = "True" if args.half else "False"
 
-    # wav_path は list 内に絶対パスで入れておく想定なので inp_wav_dir は空
-    env["inp_wav_dir"] = ""
-
+    # ★ ここがポイント：BERT のデフォルトパス
+    default_bert_dir = repo_dir / "GPT-SoVITS" / "pretrained_models" / "bert-base-multilingual-cased"
     if args.bert_dir is not None:
         env["bert_pretrained_dir"] = str(args.bert_dir.resolve())
+    else:
+        env["bert_pretrained_dir"] = str(default_bert_dir)
+
+    # CN-Hubert は 2-get-hubert 用。未指定なら空文字で渡す（あれば後で同様にデフォルトを生やしてもOK）
     if args.cnhubert_dir is not None:
         env["cnhubert_base_dir"] = str(args.cnhubert_dir.resolve())
+    else:
+        env["cnhubert_base_dir"] = ""
 
     python_bin = sys.executable
 

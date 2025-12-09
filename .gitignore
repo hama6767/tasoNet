@@ -2,3 +2,11 @@
 *.mp3
 *.wav
 *.pyc
+*.wav
+*.mp3
+*.pt
+*.pth
+*.txt
+*.list
+*.log
+*.tsv
