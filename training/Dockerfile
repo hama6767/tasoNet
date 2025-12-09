@@ -26,6 +26,7 @@ RUN pip install --no-cache-dir -r requirements.txt && \
     pip uninstall -y torchvision flash-attn flash_attn flash_attn-2 flash_attn_2 || true
 
 RUN pip install --no-cache-dir "transformers>=4.52.1" "peft==0.18.0"
+RUN pip install --no-cache-dir torchcodec bigvgan 
 
 # ★ BERT モデルを事前ダウンロード
 RUN python - << 'EOF'
