@@ -165,10 +165,10 @@ def main():
     if "s2" in stages:
         if args.s2_config is None:
             raise RuntimeError("S2 を実行するには --s2-config を指定してください。")
-        script = repo_dir / "GPT_SoVITS" / "s2_train_v3.py"
+        script = repo_dir / "GPT_SoVITS" / "s2_train.py"
         if not script.is_file():
-            raise FileNotFoundError(f"s2_train_v3.py が見つかりません: {script}")
-        print("[STEP] S2: s2_train_v3.py", flush=True)
+            raise FileNotFoundError(f"s2_train.py が見つかりません: {script}")
+        print("[STEP] S2: s2_train.py", flush=True)
         run_cmd(
             [python_bin, str(script), "-c", str(args.s2_config.resolve())],
             env=env,

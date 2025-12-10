@@ -10,3 +10,4 @@
 *.list
 *.log
 *.tsv
+gpt_sovits_env/

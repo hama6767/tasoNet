@@ -5,10 +5,10 @@ IMAGE="gpt-sovits-train"       # あなたの自作イメージ名
 GPU="0"
 HOST_WS="/home/hama6767/DA/tasoNet"         # ホスト側の /host_ws の実パスに合わせて
 
-TEXT="${1:-エストニアは北ヨーロッパというよりはロシアであることを現地民は受け入れるべきだよね}"
-REF_WAV="${HOST_WS}/taso.wav"
+TEXT="${1:-あまねかなただよ、こんかなた。よろしくね。}"
+PROMPT_TEXT="また、東寺のように、五大明王と呼ばれる、主要な明王の中央に配されることも多い。"
+REF_WAV="${HOST_WS}/tsukuyomi.wav"
 OUT_WAV="${HOST_WS}/out/test_001.wav"
-PROMPT_TEXT="卒業自体は数ヶ月前から決まっていました"
 
 docker run --rm \
   --gpus "device=${GPU}" \
@@ -20,7 +20,7 @@ docker run --rm \
     --config /workspace/GPT-SoVITS/GPT_SoVITS/configs/s2.json \
     --bert-path /workspace/GPT-SoVITS/GPT-SoVITS/pretrained_models/bert-base-multilingual-cased \
     --gpt-ckpt /home/hama6767/DA/tasoNet/training/GPT-SoVITS/GPT_SoVITS/pretrained_models/GPT-SoVITS/gsv-v2final-pretrained/s1bert25hz-5kh-longer-epoch=12-step=369668.ckpt \
-    --s2-ckpt /home/hama6767/DA/tasoNet/taso_v1.pth \
+    --s2-ckpt /home/hama6767/DA/tasoNet/tsukuyomi.pth \
     --ref-wav "${REF_WAV}" \
     --prompt-text "${PROMPT_TEXT}" \
     --text "${TEXT}" \
