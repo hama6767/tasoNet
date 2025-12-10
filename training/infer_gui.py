@@ -59,10 +59,21 @@ def get_base_dir() -> Path:
 
 
 def get_repo_dir() -> Path:
-    # ★ ここを固定パスに変更 ★
-    # GPT-SoVITS のルート:
-    #   /home/hama6767/DA/tasoNet/training/GPT-SoVITS
-    return Path("/home/hama6767/DA/tasoNet/training/GPT-SoVITS").resolve()
+    """
+    GPT-SoVITS のルートディレクトリ。
+
+    PyInstaller では --add-data "training/GPT-SoVITS:GPT-SoVITS"
+    でバンドルする前提。
+    """
+    base = get_base_dir()
+    # exe の中では base/GPT-SoVITS に展開される
+    repo = base / "GPT-SoVITS"
+
+    # 生Pythonで手元から動かしたい場合のフォールバック
+    if not repo.exists():
+        repo = Path("/home/hama6767/DA/tasoNet/training/GPT-SoVITS").resolve()
+
+    return repo
 
 
 def get_infer_cli_path() -> Path:
