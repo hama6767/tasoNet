@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-GPT-SoVITS 推論専用 GUI（高速版・一括推論特化）
+GPT-SoVITS 推論専用 GUI（高速版・一括推論特化 / ライトテーマ）
 
 - GPT-SoVITS/infer_cli.py の InferenceSession を直接呼び出し、
   モデル読み込みを 1 回にまとめて高速化。
@@ -34,7 +34,7 @@ if os.path.isdir(user_site):
     site.addsitedir(user_site)
 
 from PySide6.QtCore import QThread, Signal, Qt, QUrl
-from PySide6.QtGui import QPixmap, QDesktopServices
+from PySide6.QtGui import QPixmap, QDesktopServices, QFont
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -49,9 +49,11 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QPlainTextEdit,
     QProgressBar,
+    QGroupBox,
 )
 
 # ---- パスユーティリティ ----
+
 
 def get_base_dir() -> Path:
     """
@@ -63,6 +65,7 @@ def get_base_dir() -> Path:
 
 
 BASE_DIR = get_base_dir()
+
 
 # GPT-SoVITS のルート推定
 def get_repo_dir() -> Path:
@@ -102,6 +105,7 @@ def get_default_s2_config() -> Path:
 
 
 # ===== 一括推論ワーカー =====
+
 
 class BatchInferWorker(QThread):
     log_signal = Signal(str)
@@ -148,8 +152,11 @@ class BatchInferWorker(QThread):
         try:
             wav_files = sorted(self.ref_dir.glob("*.wav"))
             model_files = sorted(
-                [p for p in self.models_dir.iterdir()
-                 if p.is_file() and p.suffix.lower() in (".pth", ".ckpt")]
+                [
+                    p
+                    for p in self.models_dir.iterdir()
+                    if p.is_file() and p.suffix.lower() in (".pth", ".ckpt")
+                ]
             )
 
             if not wav_files:
@@ -178,8 +185,10 @@ class BatchInferWorker(QThread):
             bert_path = str(self.bert_path) if self.bert_path else None
             cnhubert_path = str(self.cnhubert_path) if self.cnhubert_path else None
 
-            self.log(f"[INFO] InferenceSession を初期化します: "
-                     f"s2={first_model.name}, gpt={gpt_path}, config={cfg_path}")
+            self.log(
+                f"[INFO] InferenceSession を初期化します: "
+                f"s2={first_model.name}, gpt={gpt_path}, config={cfg_path}"
+            )
 
             session = infer_cli.InferenceSession(
                 config_path=cfg_path,
@@ -212,7 +221,9 @@ class BatchInferWorker(QThread):
                     txt_path = self.ref_dir / f"{stem}.txt"
 
                     if not txt_path.is_file():
-                        self.log(f"[WARN] {txt_path.name} がないため {ref_wav.name} をスキップします。")
+                        self.log(
+                            f"[WARN] {txt_path.name} がないため {ref_wav.name} をスキップします。"
+                        )
                         continue
 
                     try:
@@ -222,7 +233,9 @@ class BatchInferWorker(QThread):
 
                     prompt_text = prompt_text.strip()
                     if not prompt_text:
-                        self.log(f"[WARN] {txt_path.name} が空のため {ref_wav.name} をスキップします。")
+                        self.log(
+                            f"[WARN] {txt_path.name} が空のため {ref_wav.name} をスキップします。"
+                        )
                         continue
 
                     self.log(
@@ -276,6 +289,7 @@ class BatchInferWorker(QThread):
 
 # ===== GUI 本体 =====
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -283,6 +297,10 @@ class MainWindow(QMainWindow):
         self.resize(1100, 750)
 
         self.project_root = BASE_DIR.parent
+        self.worker: Optional[BatchInferWorker] = None
+
+        # テーマ適用
+        self.apply_theme()
 
         # デフォルトパス（プロジェクトルート相対）
         default_ref_dir = self.project_root / "reference"
@@ -297,15 +315,22 @@ class MainWindow(QMainWindow):
             / "s1bert25hz-5kh-longer-epoch=12-step=369668.ckpt"
         )
 
+        # セントラルウィジェット
         central = QWidget()
-        main_layout = QHBoxLayout(central)
+        self.setCentralWidget(central)
 
-        # 左: 設定 + ログ
+        main_layout = QHBoxLayout(central)
+        main_layout.setContentsMargins(16, 16, 16, 16)
+        main_layout.setSpacing(16)
+
+        # 左: 各種設定 + ログ
         left_layout = QVBoxLayout()
+        left_layout.setSpacing(12)
         main_layout.addLayout(left_layout, 3)
 
         # 右: キャラクター画像
         right_layout = QVBoxLayout()
+        right_layout.setSpacing(8)
         right_layout.addStretch()
         self.char_label = QLabel()
         self.char_label.setAlignment(Qt.AlignCenter)
@@ -313,80 +338,89 @@ class MainWindow(QMainWindow):
         right_layout.addStretch()
         main_layout.addLayout(right_layout, 1)
 
-        layout = left_layout
+        # --- パス設定 グループ ---
 
-        # --- パス設定 ---
-
-        path_layout = QVBoxLayout()
+        path_group = QGroupBox("パス設定")
+        path_layout = QVBoxLayout(path_group)
+        path_layout.setSpacing(8)
 
         ref_dir_layout = QHBoxLayout()
-        ref_dir_layout.addWidget(QLabel("reference ディレクトリ:"))
+        ref_dir_label = QLabel("reference ディレクトリ:")
         self.ref_dir_edit = QLineEdit(str(default_ref_dir))
         ref_dir_btn = QPushButton("参照...")
         ref_dir_btn.clicked.connect(self.browse_ref_dir)
+        ref_dir_layout.addWidget(ref_dir_label)
         ref_dir_layout.addWidget(self.ref_dir_edit)
         ref_dir_layout.addWidget(ref_dir_btn)
         path_layout.addLayout(ref_dir_layout)
 
         models_dir_layout = QHBoxLayout()
-        models_dir_layout.addWidget(QLabel("models ディレクトリ (SoVITS ckpt 群):"))
+        models_dir_label = QLabel("models ディレクトリ (SoVITS ckpt 群):")
         self.models_dir_edit = QLineEdit(str(default_models_dir))
         models_dir_btn = QPushButton("参照...")
         models_dir_btn.clicked.connect(self.browse_models_dir)
+        models_dir_layout.addWidget(models_dir_label)
         models_dir_layout.addWidget(self.models_dir_edit)
         models_dir_layout.addWidget(models_dir_btn)
         path_layout.addLayout(models_dir_layout)
 
         out_dir_layout = QHBoxLayout()
-        out_dir_layout.addWidget(QLabel("出力ルートディレクトリ:"))
+        out_dir_label = QLabel("出力ルートディレクトリ:")
         self.out_dir_edit = QLineEdit(str(default_out_dir))
         out_dir_btn = QPushButton("参照...")
         out_dir_btn.clicked.connect(self.browse_out_dir)
         out_dir_open_btn = QPushButton("開く")
         out_dir_open_btn.clicked.connect(self.open_out_dir)
+        out_dir_layout.addWidget(out_dir_label)
         out_dir_layout.addWidget(self.out_dir_edit)
         out_dir_layout.addWidget(out_dir_btn)
         out_dir_layout.addWidget(out_dir_open_btn)
         path_layout.addLayout(out_dir_layout)
 
-        layout.addLayout(path_layout)
+        left_layout.addWidget(path_group)
 
-        # --- モデル設定 (config / GPT / BERT / CN-HuBERT) ---
+        # --- モデル設定 グループ ---
 
-        model_layout = QVBoxLayout()
+        model_group = QGroupBox("モデル設定")
+        model_layout = QVBoxLayout(model_group)
+        model_layout.setSpacing(8)
 
         cfg_layout = QHBoxLayout()
-        cfg_layout.addWidget(QLabel("config (s2.json 等 / 任意):"))
+        cfg_label = QLabel("config (s2.json 等 / 任意):")
         self.cfg_edit = QLineEdit(str(get_default_s2_config()))
         cfg_btn = QPushButton("参照...")
         cfg_btn.clicked.connect(self.browse_config)
+        cfg_layout.addWidget(cfg_label)
         cfg_layout.addWidget(self.cfg_edit)
         cfg_layout.addWidget(cfg_btn)
         model_layout.addLayout(cfg_layout)
 
         gpt_layout = QHBoxLayout()
-        gpt_layout.addWidget(QLabel("GPT ckpt (任意 / 空でデフォルト):"))
+        gpt_label = QLabel("GPT ckpt (任意 / 空でデフォルト):")
         self.gpt_edit = QLineEdit(str(default_gpt_ckpt))
         gpt_btn = QPushButton("参照...")
         gpt_btn.clicked.connect(self.browse_gpt_ckpt)
+        gpt_layout.addWidget(gpt_label)
         gpt_layout.addWidget(self.gpt_edit)
         gpt_layout.addWidget(gpt_btn)
         model_layout.addLayout(gpt_layout)
 
         bert_layout = QHBoxLayout()
-        bert_layout.addWidget(QLabel("BERT ディレクトリ or モデルID (任意):"))
+        bert_label = QLabel("BERT ディレクトリ or モデルID (任意):")
         self.bert_edit = QLineEdit(str(get_default_bert_dir()))
         bert_btn = QPushButton("参照...")
         bert_btn.clicked.connect(self.browse_bert)
+        bert_layout.addWidget(bert_label)
         bert_layout.addWidget(self.bert_edit)
         bert_layout.addWidget(bert_btn)
         model_layout.addLayout(bert_layout)
 
         cnhubert_layout = QHBoxLayout()
-        cnhubert_layout.addWidget(QLabel("CN-HuBERT ディレクトリ (任意):"))
+        cnhubert_label = QLabel("CN-HuBERT ディレクトリ (任意):")
         self.cnhubert_edit = QLineEdit("")  # 空なら infer_cli 側でデフォルト
         cnhubert_btn = QPushButton("参照...")
         cnhubert_btn.clicked.connect(self.browse_cnhubert)
+        cnhubert_layout.addWidget(cnhubert_label)
         cnhubert_layout.addWidget(self.cnhubert_edit)
         cnhubert_layout.addWidget(cnhubert_btn)
         model_layout.addLayout(cnhubert_layout)
@@ -398,15 +432,22 @@ class MainWindow(QMainWindow):
         half_layout.addStretch()
         model_layout.addLayout(half_layout)
 
-        layout.addLayout(model_layout)
+        left_layout.addWidget(model_group)
 
-        # --- テキスト入力 ---
+        # --- 生成テキスト グループ ---
 
-        text_layout = QVBoxLayout()
-        text_layout.addWidget(QLabel("生成したいテキスト（1 行 1 音声。全モデル × 全reference に適用）:"))
+        text_group = QGroupBox("生成テキスト")
+        text_layout = QVBoxLayout(text_group)
+        text_layout.setSpacing(8)
+
+        text_layout.addWidget(
+            QLabel("生成したいテキスト（1 行 1 音声。全モデル × 全 reference に適用）:")
+        )
 
         self.text_edit = QPlainTextEdit()
-        self.text_edit.setPlaceholderText("例:\nあまねかなただよ、こんかなた。よろしくね。\n別のセリフ 2 行目...\n...")
+        self.text_edit.setPlaceholderText(
+            "例:\nあまねかなただよ、こんかなた。よろしくね。\n別のセリフ 2 行目...\n..."
+        )
         text_layout.addWidget(self.text_edit)
 
         text_btn_layout = QHBoxLayout()
@@ -418,9 +459,13 @@ class MainWindow(QMainWindow):
         text_btn_layout.addWidget(save_txt_btn)
         text_layout.addLayout(text_btn_layout)
 
-        layout.addLayout(text_layout)
+        left_layout.addWidget(text_group)
 
-        # --- 実行ボタン & 進捗 ---
+        # --- 実行 & 進捗 グループ ---
+
+        run_group = QGroupBox("一括推論")
+        run_layout = QVBoxLayout(run_group)
+        run_layout.setSpacing(8)
 
         btn_layout = QHBoxLayout()
         self.run_btn = QPushButton("一括推論開始")
@@ -430,7 +475,7 @@ class MainWindow(QMainWindow):
         self.stop_btn.setEnabled(False)
         btn_layout.addWidget(self.run_btn)
         btn_layout.addWidget(self.stop_btn)
-        layout.addLayout(btn_layout)
+        run_layout.addLayout(btn_layout)
 
         prog_layout = QHBoxLayout()
         self.progress_bar = QProgressBar()
@@ -438,16 +483,27 @@ class MainWindow(QMainWindow):
         self.progress_label = QLabel("0 / 0")
         prog_layout.addWidget(self.progress_bar)
         prog_layout.addWidget(self.progress_label)
-        layout.addLayout(prog_layout)
+        run_layout.addLayout(prog_layout)
 
-        # --- ログ ---
+        left_layout.addWidget(run_group)
+
+        # --- ログ グループ ---
 
         self.log_text = QPlainTextEdit()
         self.log_text.setReadOnly(True)
-        layout.addWidget(self.log_text)
+        self.log_text.setObjectName("logText")
 
-        self.setCentralWidget(central)
-        self.worker: Optional[BatchInferWorker] = None
+        # ログはモノスペースフォント
+        log_font = QFont("JetBrains Mono", 9)
+        log_font.setStyleHint(QFont.Monospace)
+        self.log_text.setFont(log_font)
+
+        log_group = QGroupBox("ログ")
+        log_layout = QVBoxLayout(log_group)
+        log_layout.setSpacing(4)
+        log_layout.addWidget(self.log_text)
+
+        left_layout.addWidget(log_group, 1)
 
         # キャラクター画像読み込み
         self.load_character_image()
@@ -461,15 +517,109 @@ class MainWindow(QMainWindow):
                 "GPT-SoVITS の配置やパス設定を確認してください。",
             )
 
+    # ---- テーマ ----
+
+    def apply_theme(self):
+        # ベースフォント
+        base_font = QFont("Noto Sans CJK JP", 10)
+        self.setFont(base_font)
+
+        # ライトテーマのスタイルシート
+        self.setStyleSheet(
+            """
+        QMainWindow {
+            background-color: #f3f4f6;
+        }
+        QLabel {
+            color: #111827;
+        }
+        QGroupBox {
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            margin-top: 12px;
+            padding: 8px 10px 10px 10px;
+            background-color: #ffffff;
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            left: 10px;
+            padding: 0 4px;
+            color: #6b7280;
+            background-color: transparent;
+        }
+        QLineEdit, QPlainTextEdit {
+            background-color: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 4px 6px;
+            selection-background-color: #2563eb;
+            selection-color: #ffffff;
+        }
+        QPlainTextEdit#logText {
+            background-color: #f9fafb;
+        }
+        QPushButton {
+            background-color: #2563eb;
+            border-radius: 6px;
+            padding: 6px 12px;
+            color: #ffffff;
+            border: none;
+        }
+        QPushButton:hover {
+            background-color: #1d4ed8;
+        }
+        QPushButton:pressed {
+            background-color: #1e40af;
+        }
+        QPushButton:disabled {
+            background-color: #e5e7eb;
+            color: #9ca3af;
+        }
+        QCheckBox {
+            spacing: 6px;
+        }
+        QProgressBar {
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background-color: #e5e7eb;
+            text-align: center;
+            color: #111827;
+        }
+        QProgressBar::chunk {
+            border-radius: 6px;
+            background-color: #22c55e;
+        }
+        QScrollBar:vertical {
+            background: #f3f4f6;
+            width: 10px;
+            margin: 0;
+        }
+        QScrollBar::handle:vertical {
+            background: #9ca3af;
+            border-radius: 5px;
+        }
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+            height: 0;
+        }
+        """
+        )
+
     # ---- キャラクター画像 ----
     def load_character_image(self):
         img_path = self.project_root / "taso.png"
         if img_path.is_file():
             pix = QPixmap(str(img_path))
             if not pix.isNull():
-                pix = pix.scaled(256, 256, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                pix = pix.scaled(256, 1000, Qt.KeepAspectRatio, Qt.SmoothTransformation)
                 self.char_label.setPixmap(pix)
                 self.char_label.setVisible(True)
+                # カード風の背景
+                self.char_label.setStyleSheet(
+                    "background-color: rgba(255, 255, 255, 0.9);"
+                    "border-radius: 16px;"
+                    "padding: 12px;"
+                    "border: 1px solid #e5e7eb;"
+                )
                 return
         self.char_label.setVisible(False)
 
@@ -648,7 +798,6 @@ class MainWindow(QMainWindow):
         self.append_log("[INFO] 一括推論を開始します...")
         self.update_progress(0, 0)
 
-        self.run_btn.setEnabled(True)  # 直後に False にするが、意図的に明示
         self.run_btn.setEnabled(False)
         self.stop_btn.setEnabled(True)
 
@@ -661,7 +810,9 @@ class MainWindow(QMainWindow):
     def stop_batch_infer(self):
         if self.worker is not None:
             self.worker.request_stop()
-            self.append_log("[INFO] 停止要求を送りました。現在のジョブが終了するまで少し待ちます。")
+            self.append_log(
+                "[INFO] 停止要求を送りました。現在のジョブが終了するまで少し待ちます。"
+            )
             self.stop_btn.setEnabled(False)
 
 
