@@ -6,9 +6,9 @@ GPU="0"
 HOST_WS="/home/hama6767/DA/tasoNet"         # ホスト側の /host_ws の実パスに合わせて
 
 TEXT="${1:-信じ続けた未来を裏切られた悲しみ覆すことが出来ない現実と夢を見続けた日々に挟まれ俺は己の弱さを憎み続けてきたそれでも伝え続けた言葉の欠片達ついには消えゆくその瞬間にあなたの心のどこかに少しでも残っていることを祈りそれが叶わぬ願いだと知りながら}"
-REF_WAV="${HOST_WS}/taso.wav"
+REF_WAV="${HOST_WS}/taso3.wav"
 OUT_WAV="${HOST_WS}/out/test_001.wav"
-PROMPT_TEXT="卒業自体は数ヶ月前から決まっていました"
+PROMPT_TEXT="ゲームはまだまだ上手くいかないこともあるけど最近はちょっと上手くなったような気がする一生懸命頑張っているから"
 
 docker run --rm \
   --gpus "device=${GPU}" \
