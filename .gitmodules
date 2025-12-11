@@ -1,0 +1,3 @@
+[submodule "training/GPT-SoVITS"]
+	path = training/GPT-SoVITS
+	url = git@github.com:hama6767/GPT-SoVITS.git
